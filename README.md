@@ -22,7 +22,7 @@ Not all the sensors require an introduction, presence, motion, heartrate... all 
    * Presence is just a perfect binary status byte 1 or 0, present, not present.
    * Fall Detection is the secret sauce of this particular radar module, I can't say exactly how it works. My test was done at max sensitivity and all I did was lay down on the floor ¯\_(ツ)_/¯
    * Fall Detection Sensitivity is both a number sensor and a setting as is typical with these types of devices that send/receive settting using UART. I'm unsure what the default setting is, even resetting the radar module doesn't seem to change what you have set here.
-   * Fall Detection Switch, self explanatory? :) ok fine... this simply enables or disables reporting of a detected fall or at least it's supposed to, I can tell it's taking effect because the radar reports it back but I didn't test it.
+   * Fall Detection Switch, self-explanatory!? :) ok fine... this simply enables or disables reporting of a detected fall or at least it's supposed to, I can tell it's taking effect because the radar reports it back but I didn't test it.
 
 # Sensor implementation
 
