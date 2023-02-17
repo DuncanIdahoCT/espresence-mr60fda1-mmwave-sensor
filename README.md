@@ -1,5 +1,5 @@
-# espresence-mr60bha1-mmwave-sensor
-Home Assistant / ESPHome Integration for the Seeed Studio 60GHz mmWave Breathing and Heartbeat Module
+# espresence-mr60fda1-mmwave-sensor
+Home Assistant / ESPHome Integration for the Seeed Studio 60GHz mmWave Fall Detection Pro Module
 
 ![ESPHome HA Integration](/static/images/HA%20Sensor.png)
 
