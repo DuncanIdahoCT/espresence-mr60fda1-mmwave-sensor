@@ -1,6 +1,8 @@
-# Some UART debug fun...
+# The build
 
-### These are heartbeat messages from the radar module that are received every 1 minute:
+![Enclosure Case](images/enclosure%20case.png)
+
+###:
 
   ```
   [D][uart_debug:114]: <<< 53,59,01,01,00,01,0F,BE,54,43
@@ -89,5 +91,5 @@
   ```
 ### After this sequence, and assuming no other activity is "visible" to the radar, you should see all the HA sensor states populated with the exception of Heartrate State which is documented in the Seeed protocol tables but doesn't seem to be working quite yet... perhaps with a later version of the module that has newer firmware.
 
-![Seeed 60GHz Protocol Tables](images/60GHz%20_Protocol1.png)
+
 
