@@ -20,12 +20,13 @@ Not all the sensors require an introduction, presence, motion, heartrate... all 
    * Activity Level is a 0-100 scale representation of just how much movement the sensor is detecting, don't kill the messenger, I have no idea how the sensor determines this
    * Motion is an interesting one; I'm using it as a binary sensor, simply there is or is not motion. However, technically there are 3 states for this (none, stationary, and active) and I'm ignoring none because I can't think of why it’s even there given there is a separate dedicated presence function. Therefore, I'm mapping active and stationary to 1, and 0 respectively.
    * Presence is just a perfect binary status byte 1 or 0, present, not present.
-   * Respiratory Rate works "as well as" heartrate level, again, I've no way to judge accuracy, I'm just updating the state with the raw data
-   * Respiratory State... possibly the most interesting of them all, it starts out as detecting, then could be one of 3 more states: normal, too low, too high. I find this one quite entertaining... and that's probably the only thing you should use it for, entertainment purposes only! lol. I would instead recommend that you just use the actual Resp Rate data and devise your own thresholds that trigger alerts perhaps.  
+   * Fall Detection is the secret sauce of this particular radar module, I can't say exactly how it works. My test was done at max sensitivity and all I did was lay down on the floor ¯\_(ツ)_/¯
+   * Fall Detection Sensitivity is both a number sensor and a setting as is typical with these types of devices that send/receive settting using UART. I'm unsure what the default setting is, even resetting the radar module doesn't seem to change what you have set here.
+   * Fall Detection Switch, self explanatory? :) ok fine... this simply enables or disables reporting of a detected fall or at least it's supposed to, I can tell it's taking effect because the radar reports it back but I didn't test it.
 
 # Sensor implementation
 
-You can see from the ESP captive portal image above that some of the sensors have "internal" template references that look like duplicates. These will only show up in the code or on the debug webtool for the ESP module. I used the publish to template method to be able to have binary and text sensors using state data received to basic sensors from a single UART device component class.
+You can see from the ESP captive portal image above that some of the sensors have "internal" template references that look like duplicates. These will only show up in the code or on the debug webtool for the ESP module. I used the publish to template method to be able to have binary and types using state data received to basic sensors from a single UART device component class. I think I've found a way to do this in a much cleaner way in the C++ / ESPHome YAML code but it's not on my top priority to-do list right now.
 
 The presence sensor for example:
   ```
@@ -48,23 +49,22 @@ Has a corresponding binary_sensor reference:
       - delayed_off: 5s
   ```
 
-The presence sensor is marked as interna: true and given a name to hint at this while the presence binary_sensor is the one that is presented to the integration and has the occupancy device class and proper states
+The presence sensor is marked as internal: true and given a name to hint at this while the presence binary_sensor is the one that is presented to the integration and has the occupancy device class and proper states
 
-There are surely other ways to get around the issues I was facing but I found this to be clean and easy enough and kept the include.h uart device component code nice and simple.
-
+There are likely other ways to get around the issues I was facing but I found this to be clean and easy enough and kept the include.h uart device component code nice and simple.
 
 # Installation:
  * Download the C++ header file and copy it (keeping the subfolder paths) into your Home Assistant config/esphome main folder:
 
    ```
-   header/esp-mmwave-60ghz-sensor.h
+   header/esp-mmwave-60ghz-fda-sensor.h
    
    ```
  
  * In Home Assistant add-on, click ESPHome>open web gui and create a new device choosing the "continue" option and give it a name such as:
 
    ```
-   espresence-mr60bha1-mmwave-sensor
+   espresence-mr60fda1-mmwave-sensor
    
    ```
 
@@ -73,7 +73,7 @@ There are surely other ways to get around the issues I was facing but I found th
 * Now click edit on your new sensor in ESPHome and you'll see the basic code:
    ```
    esphome:
-    name: espresence-mr60bha1-mmwave-sensor
+    name: espresence-mr60fda1-mmwave-sensor
 
    esp32:
     board: esp32dev
@@ -97,7 +97,7 @@ There are surely other ways to get around the issues I was facing but I found th
 
      # Enable fallback hotspot (captive portal) in case wifi connection fails
     ap:
-      ssid: "espresence-mr60bha1-mmwave-sensor"
+      ssid: "espresence-mr60fda1-mmwave-sensor"
      password: "RvZXGuhrPCzl"
 
    captive_portal:
@@ -112,7 +112,7 @@ There are surely other ways to get around the issues I was facing but I found th
    ```
     substitutions:
       # change device name to match your desired name
-      device_name: "espresence-mr60bha1-mmwave-sensor"
+      device_name: "espresence-mr60fda1-mmwave-sensor"
       # change sensor name below to the one you want to see in Home Assistant
       device_name_pretty: ESP mmWave 60 gHz Test
       # change room name below to the one you want to see in Home Assistant
@@ -122,11 +122,9 @@ There are surely other ways to get around the issues I was facing but I found th
       # change the below to be your WiFi password
       wifi_password: !secret wifi_password
       # UART TX Pin
-      uart_tx_pin: GPIO17
+      uart_tx_pin: A0
       # UART RX Pin
-      uart_rx_pin: GPIO16
-      # Distance sensor multiplier to express meters instead of centimeters
-      distance_multiplier: ".01"
+      uart_rx_pin: A1
       
    ```
 * The room: "name" is key as it will be the name of each sensor object in HA so if you chose "Office" here, you sensors will be Office Motion, Office Presence, etc...
