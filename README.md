@@ -7,15 +7,15 @@ Home Assistant / ESPHome Integration for the Seeed Studio 60GHz mmWave Fall Dete
 
 Some project notes and data on development testing can be found [here](/static/project.md)!
 
-This is a fully functional ESP based integration with Home Assistant for the Seeed Studios 60GHz Fall Detection Pro radar module. I used an Adafruit QT PY ESP32-S2 for my setup but any ESP module that has a UART bus should work fine. The sensor does requrie 5V (not 3.3v) to function properly, or perhaps at all. I've managed to go through most of the currently in production (meaning not still underdevelopment) features listed on the Seeed protocol tables for this radar module and expose these options and sensors using ESPHome. I've personally tested the fall detection on max sensitivity and it "works" but YMMV for sure!
+This is a fully functional ESP based integration with Home Assistant for the Seeed Studios 60GHz Fall Detection Pro radar module. I used an Adafruit QT PY ESP32-S2 for my setup but any ESP module that has a UART bus should work fine. The sensor does require 5V (not 3.3v) to function properly, or perhaps at all. I've managed to go through most of the currently in production (meaning not still underdevelopment) features listed on the Seeed protocol tables for this radar module and expose these options and sensors using ESPHome. I've personally tested the fall detection on max sensitivity, and it "works" but YMMV for sure!
 
-If you follow the Seeed forums or Discord, you'll see quite a few threads about how the fall detection is very spefic on placement, angle, FOV, range, etc...
+If you follow the Seeed forums or Discord, you'll see quite a few threads about how the fall detection is very specific on placement, angle, FOV, range, etc...
 
 The presence and motion range of the Fall Detection Pro module, even though it's only a firmware difference from the Resp/Heart module, is quite a bit higher at 6 Meters and 3 Meters for fall detection... my limited testing was well withing 3 meters.
 
 # Sensors explained...
 
-Not all the sensors require an introduction, presence, motion, heartrate... all seem pretty self explanetory but there are some caveats on how I chose to implement them in ESPHome and C++
+Not all the sensors require an introduction, presence, motion, heartrate... all seem pretty self explanatory but there are some caveats on how I chose to implement them in ESPHome and C++
 
    * Activity Level is a 0-100 scale representation of just how much movement the sensor is detecting, don't kill the messenger, I have no idea how the sensor determines this
    * Motion is an interesting one; I'm using it as a binary sensor, simply there is or is not motion. However, technically there are 3 states for this (none, stationary, and active) and I'm ignoring none because I can't think of why it’s even there given there is a separate dedicated presence function. Therefore, I'm mapping active and stationary to 1, and 0 respectively.
