@@ -10,19 +10,20 @@ substitutions:
   # change the below to be your WiFi password
   wifi_password: !secret wifi_password
   # UART TX Pin
-  uart_tx_pin: GPIO17
+  uart_tx_pin: A0
   # UART RX Pin
-  uart_rx_pin: GPIO16
-  # Distance sensor multiplier to express meters instead of centimeters
-  distance_multiplier: ".01"
+  uart_rx_pin: A1
 
 esphome:
   name: $device_name
   includes:
-    - header/esp-mmwave-60ghz-sensor.h
+    - header/esp-mmwave-60ghz-fda-sensor.h
+  platformio_options:
+    board_build.extra_flags:
+      - "-DARDUINO_USB_CDC_ON_BOOT=0"  # Override, defaults to '-DARDUINO_USB_CDC_ON_BOOT=1'
 
 esp32:
-  board: esp32dev
+  board: adafruit_qtpy_esp32s2
   framework:
     type: arduino
 
@@ -75,7 +76,7 @@ uart:
   baud_rate: 115200
 #  debug:
 #    direction: BOTH
-#    dummy_receiver: false # enabling this, prevents UART byte read in main program, use only for debugging of raw frames and pin assignments
+#    dummy_receiver: false # enabling this, prevents UART byte read in main program, use only for debugging of raw frames and pin assignments prior to including main code class
 #    sequence:
 #      - lambda: UARTDebug::log_hex(direction, bytes, ',');
 
@@ -84,60 +85,10 @@ sensor:
     lambda: |-
       auto my_sensor = new UARTSensor(id(uart_bus)); 
       App.register_component(my_sensor);
-      return {my_sensor->heartstate_sensor, my_sensor->heartrate_sensor, my_sensor->respstate_sensor, my_sensor->resprate_sensor, my_sensor->activity_sensor, my_sensor->distance_sensor, my_sensor->angle_x_sensor, my_sensor->angle_y_sensor, my_sensor->angle_z_sensor, my_sensor->presence_sensor, my_sensor->motion_sensor};
+      return {my_sensor->activity_sensor, my_sensor->presence_sensor, my_sensor->motion_sensor, my_sensor->fall_sensor, my_sensor->fall_det_sw, my_sensor->fall_det_sens};
   
     sensors:
-      - name: "${room} Heartrate State"
-        state_class: measurement
-      - name: "${room} Heartrate Level"
-        state_class: measurement
-      - id: respstate_sensor
-        name: "internal_respstate_sensor_to_text_template"
-        internal: true
-        on_value_range:
-          - above: 3.5
-            below: 4.5
-            then:
-            - text_sensor.template.publish:
-                id: respstate_template
-                state: !lambda return "detecting";
-          - above: 2.5
-            below: 3.5
-            then:
-            - text_sensor.template.publish:
-                id: respstate_template
-                state: !lambda return "too low";
-          - above: 1.5
-            below: 2.5
-            then:
-            - text_sensor.template.publish:
-                id: respstate_template
-                state: !lambda return "too high";
-          - above: 0.5
-            below: 1.5
-            then:
-            - text_sensor.template.publish:
-                id: respstate_template
-                state: !lambda return "normal";
-          - below: 0.5
-            then:
-            - text_sensor.template.publish:
-                id: respstate_template
-                state: !lambda return "none";
-      - name: "${room} Respiratory Rate"
-        state_class: measurement
       - name: "${room} Activity Level"
-        state_class: measurement
-      - name: "${room} Distance (Meters)"
-        state_class: measurement
-        accuracy_decimals: 1
-        filters:
-          multiply: ${distance_multiplier}
-      - name: "${room} Angle X:"
-        state_class: measurement
-      - name: "${room} Angle Y:"
-        state_class: measurement
-      - name: "${room} Angle Z:"
         state_class: measurement
       - id: presence_sensor
         name: "internal_presense_sensor_to_binary_template"
@@ -153,6 +104,24 @@ sensor:
           - binary_sensor.template.publish:
               id: motion_template
               state: !lambda return x > 0;
+      - id: fall_sensor
+        name: "internal_fall_sensor_to_binary_template"
+        internal: true
+        on_value:
+          - binary_sensor.template.publish:
+              id: fall_template
+              state: !lambda return x > 0;
+      - id: fall_det_sw
+        name: "internal_fall_det_sw_to_binary_template"
+        internal: true
+        on_value:
+          - switch.template.publish:
+              id: fall_det_sw_template
+              state: !lambda return x > 0;
+      - id: fall_det_sens
+        name: "internal_fall_det_sens_to_binary_template"
+        internal: true
+
 button:
   - platform: restart
     name: "Restart MCU: ${room}"
@@ -167,11 +136,49 @@ button:
     entity_category: diagnostic
     on_press:
       - uart.write: [0x53, 0x59, 0x01, 0x02, 0x00, 0x01, 0x0F, 0xBF, 0x54, 0x43]
-      # just putting these placeholders here in case the frames are removed from documentation as has happened with other options
-      # realtime_mode_frame
-      # - uart.write: [0x53, 0x59, 0x84, 0x0F, 0x00, 0x01, 0x00, 0x40, 0x54, 0x43]
-      # sleepstatus_mode_frame
-      # - uart.write: [0x53, 0x59, 0x84, 0x0F, 0x00, 0x01, 0x01, 0x41, 0x54, 0x43]
+
+switch:
+  - platform: template
+    name: Fall Detection Switch
+    id: fall_det_sw_template
+    entity_category: config
+    optimistic: false
+    turn_on_action:
+      - uart.write: [0x53, 0x59, 0x83, 0x00, 0x00, 0x01, 0x01, 0x31, 0x54, 0x43]
+    turn_off_action:
+      - uart.write: [0x53, 0x59, 0x83, 0x00, 0x00, 0x01, 0x00, 0x30, 0x54, 0x43]
+
+number:
+  - platform: template
+    name: Fall Detection Sensitivity
+    id: fall_det_sens_template
+    entity_category: config
+    min_value: 0
+    max_value: 3
+    lambda: |-
+      return id(fall_det_sens).state;
+    step: 1
+    set_action:
+    - if:
+        condition:
+          lambda: 'return (int)x == 0.000000;'
+        then:
+          - uart.write: [0x53, 0x59, 0x83, 0x0D, 0x00, 0x01, 0x00, 0x3D, 0x54, 0x43]
+    - if:
+        condition:
+          lambda: 'return (int)x == 1.000000;'
+        then:
+          - uart.write: [0x53, 0x59, 0x83, 0x0D, 0x00, 0x01, 0x01, 0x3E, 0x54, 0x43]
+    - if:
+        condition:
+          lambda: 'return (int)x == 2.000000;'
+        then:
+          - uart.write: [0x53, 0x59, 0x83, 0x0D, 0x00, 0x01, 0x02, 0x3F, 0x54, 0x43]
+    - if:
+        condition:
+          lambda: 'return (int)x == 3.000000;'
+        then:
+          - uart.write: [0x53, 0x59, 0x83, 0x0D, 0x00, 0x01, 0x03, 0x40, 0x54, 0x43]
 
 binary_sensor:
   - platform: template
@@ -184,8 +191,7 @@ binary_sensor:
     id: motion_template
     name: "${room} Motion"
     device_class: motion
-
-text_sensor:
   - platform: template
-    id: respstate_template
-    name: "${room} Respiratory State"
+    id: fall_template
+    name: "${room} Fall Detection"
+    device_class: safety
