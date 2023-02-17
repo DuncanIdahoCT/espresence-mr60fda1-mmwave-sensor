@@ -3,7 +3,6 @@ Home Assistant / ESPHome Integration for the Seeed Studio 60GHz mmWave Fall Dete
 
 ![ESPHome HA Integration](/static/images/HA%20Sensor.png)
 
-
 ![ESP Capive Portal](/static/images/ESP%20Captive%20Portal.png)
 
 Some project notes and data on development testing can be found [here](/static/project.md)!
