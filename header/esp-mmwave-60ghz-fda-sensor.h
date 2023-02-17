@@ -32,10 +32,6 @@ void loop() override
     }
 }
 
-// scratchpad:
-// std::string teststr = "Test String and (to string) int Bytes " + to_string(int(bytes[6]));
-
-
   void processPacket() {            
 
     std::string str = "";
